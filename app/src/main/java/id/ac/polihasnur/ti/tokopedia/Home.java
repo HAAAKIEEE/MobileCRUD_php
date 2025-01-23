@@ -1,9 +1,11 @@
 package id.ac.polihasnur.ti.tokopedia;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -12,9 +14,13 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.Toast;
+
 import org.json.JSONException;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -36,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +52,10 @@ public class Home extends AppCompatActivity {
     Integer photo_max = 1;
     Bitmap bitmap;
     ActivityResultLauncher<Intent> activityResultLauncher;
-    Button btn_add_photo, btn_upload;
+    Button btn_upload;
     Uri photo_location;
     ImageView home_image;
-    ListView home_listview ;
+    ListView home_listview;
     int[] list_index;
 
 
@@ -56,25 +63,113 @@ public class Home extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
-        btn_add_photo = findViewById(R.id.btn_add_photo);
         btn_upload = findViewById(R.id.btn_upload);
         home_image = findViewById(R.id.home_image);
         home_listview = findViewById(R.id.home_listview); // Sesuaikan dengan ID ListView di layout XML Anda
-
+        activityResultLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                new ActivityResultCallback<ActivityResult>() {
+                    @Override
+                    public void onActivityResult(ActivityResult o) {
+                        if (o.getResultCode() == Activity.RESULT_OK) {
+                            Intent data = o.getData();
+                            Uri uri = data.getData();
+                            try {
+                                bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                                home_image.setImageBitmap(bitmap);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
         itemList();
         // Button to add photo
-        btn_add_photo.setOnClickListener(v -> findPhoto());
+        home_image.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(Intent.ACTION_PICK);
+                intent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                activityResultLauncher.launch(intent);
+            }
+        });
 
         // Button to upload
-        btn_upload.setOnClickListener(v -> {
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            Log.d("Home", "Tombol Upload diklik");
-            EditText home_item = findViewById(R.id.home_item);
-            EditText home_deskripsi = findViewById(R.id.home_deskripsi);
-            String item = home_item.getText().toString();
-            String deskripsi = home_deskripsi.getText().toString();
-            String image_path = "test";
-if (bitma)
+        btn_upload.setOnClickListener(v -> post());
+
+    }
+
+    // Function to select a photo from gallery
+//    public void findPhoto() {
+//        Intent pic = new Intent();
+//        pic.setType("image/*");
+//        pic.setAction(Intent.ACTION_GET_CONTENT);
+//        startActivityForResult(pic, photo_max);
+//    }
+//
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        if (requestCode == photo_max && resultCode == RESULT_OK && data != null && data.getData() != null) {
+//            photo_location = data.getData();
+//            Picasso.with(Home.this).load(photo_location)
+//                    .centerCrop().fit().into(home_image);
+//        }
+//    }
+
+    public void itemList() {
+        List<String> Item = new ArrayList<String>();
+        ArrayAdapter<String> dataitem = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, Item);
+        dataitem.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        home_listview.setAdapter(dataitem);
+        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+        String url = "http://192.168.47.150//tokopedia-db/itemall.php";
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        Item.clear();
+                        try {
+                            JSONArray jsonArray = new JSONArray(response);
+                            list_index = new int[jsonArray.length()];
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                                String item = jsonObject.getString("item_name");
+                                String descripsi = jsonObject.getString("description");
+
+                                list_index[i] = Integer.parseInt(jsonObject.getString("id"));
+
+                                //memasukkan data ke listview
+                                Item.add(item);
+                                dataitem.notifyDataSetChanged();
+                            }
+                        } catch (JSONException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+        }) {
+        };
+
+        queue.add(stringRequest);
+    }
+
+    public void post() {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        Log.d("Home", "Tombol Upload diklik");
+        EditText home_item = findViewById(R.id.home_item);
+        EditText home_deskripsi = findViewById(R.id.home_deskripsi);
+        String item = home_item.getText().toString();
+        String deskripsi = home_deskripsi.getText().toString();
+        if (bitmap != null) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+            byte[] bytes = byteArrayOutputStream.toByteArray();
+//            final String base = Base64.encodeToString(bytes,Base64.DEFAULT);
+            final String base = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT);
+
             // Create Volley request to upload the item and description
             RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
             String url = "http://192.168.47.150//tokopedia-db/upload.php";
@@ -102,73 +197,17 @@ if (bitma)
                     Map<String, String> paramV = new HashMap<>();
                     paramV.put("item", item);
                     paramV.put("deskripsi", deskripsi);
-                    paramV.put("image_path", image_path);
+                    paramV.put("image_path", base);
 
                     return paramV;
                 }
             };
 
             queue.add(stringRequest);
-        });
+        } else {
+            Toast.makeText(Home.this, "upload gambar dulu.", Toast.LENGTH_SHORT).show();
 
-
-    }
-
-    // Function to select a photo from gallery
-    public void findPhoto() {
-        Intent pic = new Intent();
-        pic.setType("image/*");
-        pic.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(pic, photo_max);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == photo_max && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            photo_location = data.getData();
-            Picasso.with(Home.this).load(photo_location)
-                    .centerCrop().fit().into(home_image);
         }
-    }
-    public void itemList() {
-        List<String> Item = new ArrayList<String>();
-        ArrayAdapter<String> dataitem = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1,Item);
-        dataitem.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        home_listview.setAdapter(dataitem);
-        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = "http://192.168.47.150//tokopedia-db/itemall.php";
-        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Item.clear();
-                        try {
-                            JSONArray jsonArray = new JSONArray(response);
-                            list_index = new int[jsonArray.length()];
-                            for (int i=0; i<jsonArray.length(); i++){
-                                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                String item = jsonObject.getString("item_name");
-                                String descripsi = jsonObject.getString("description");
-
-                                list_index[i] = Integer.parseInt(jsonObject.getString("id"));
-
-                                //memasukkan data ke listview
-                                Item.add(item);
-                                dataitem.notifyDataSetChanged();
-                            }
-                        }catch (JSONException e){
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-
-            }
-        }){};
-
-        queue.add(stringRequest);
     }
 
 }
