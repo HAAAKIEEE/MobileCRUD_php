@@ -115,47 +115,100 @@ public class Home extends AppCompatActivity {
 //                    .centerCrop().fit().into(home_image);
 //        }
 //    }
-
     public void itemList() {
-        List<String> Item = new ArrayList<String>();
-        ArrayAdapter<String> dataitem = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, Item);
-        dataitem.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        home_listview.setAdapter(dataitem);
+        List<Item> itemList = new ArrayList<>();
+        ItemAdapter adapter = new ItemAdapter(this, itemList);
+        home_listview.setAdapter(adapter);
+
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
         String url = "http://192.168.47.150//tokopedia-db/itemall.php";
+
         StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        Item.clear();
+                        itemList.clear();
                         try {
                             JSONArray jsonArray = new JSONArray(response);
-                            list_index = new int[jsonArray.length()];
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
-                                String item = jsonObject.getString("item_name");
-                                String descripsi = jsonObject.getString("description");
 
-                                list_index[i] = Integer.parseInt(jsonObject.getString("id"));
+                                String name = jsonObject.getString("item_name");
+                                String description = jsonObject.getString("description");
+                                String imageUrl = "http://192.168.47.150/tokopedia-db/" + jsonObject.getString("image_path");
 
-                                //memasukkan data ke listview
-                                Item.add(item);
-                                dataitem.notifyDataSetChanged();
+                                // Tambahkan item ke list
+                                itemList.add(new Item(name, description, imageUrl));
                             }
+                            adapter.notifyDataSetChanged();
                         } catch (JSONException e) {
-                            throw new RuntimeException(e);
+                            e.printStackTrace();
                         }
                     }
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-
+                Toast.makeText(Home.this, "Gagal memuat data", Toast.LENGTH_SHORT).show();
             }
-        }) {
-        };
+        });
 
         queue.add(stringRequest);
+
+        // Set klik listener pada item
+        home_listview.setOnItemClickListener((parent, view, position, id) -> {
+            Item selectedItem = itemList.get(position);
+
+            // Pindah ke halaman DetailActivity
+            Intent intent = new Intent(Home.this, DetailAct.class);
+            intent.putExtra("item_name", selectedItem.getName());
+            intent.putExtra("item_description", selectedItem.getDescription());
+            intent.putExtra("item_image", selectedItem.getImageUrl());
+            startActivity(intent);
+        });
+
     }
+
+
+//    public void itemList() {
+//        List<String> Item = new ArrayList<String>();
+//        ArrayAdapter<String> dataitem = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, Item);
+//        dataitem.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//        home_listview.setAdapter(dataitem);
+//        RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+//        String url = "http://192.168.47.150//tokopedia-db/itemall.php";
+//        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+//                new Response.Listener<String>() {
+//                    @Override
+//                    public void onResponse(String response) {
+//                        Item.clear();
+//                        try {
+//                            JSONArray jsonArray = new JSONArray(response);
+//                            list_index = new int[jsonArray.length()];
+//                            for (int i = 0; i < jsonArray.length(); i++) {
+//                                JSONObject jsonObject = jsonArray.getJSONObject(i);
+//                                String item = jsonObject.getString("item_name");
+//                                String descripsi = jsonObject.getString("description");
+//
+//                                list_index[i] = Integer.parseInt(jsonObject.getString("id"));
+//
+//                                //memasukkan data ke listview
+//                                Item.add(item);
+//                                dataitem.notifyDataSetChanged();
+//                            }
+//                        } catch (JSONException e) {
+//                            throw new RuntimeException(e);
+//                        }
+//                    }
+//                }, new Response.ErrorListener() {
+//            @Override
+//            public void onErrorResponse(VolleyError error) {
+//
+//            }
+//        }) {
+//        };
+//
+//        queue.add(stringRequest);
+//    }
 
     public void post() {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
