@@ -12,19 +12,29 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 import java.io.InputStream;
 
 public class DetailAct extends AppCompatActivity {
+    BottomNavigationView edit_bot_nav;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+        // Bottom Navigation setup
+        edit_bot_nav = findViewById(R.id.edit_bot_nav);
+
+        edit_bot_nav.setOnItemSelectedListener(item -> {
+
+            startActivity(new Intent(DetailAct.this, Home.class).putExtra("id_user", "1"));
+            finish();
+            return true;
+        });
         Button sunting = findViewById(R.id.sunting);
-
-
-
         // Ambil data dari Intent
+        String id = getIntent().getStringExtra("item_id");
         String name = getIntent().getStringExtra("item_name");
         String description = getIntent().getStringExtra("item_description");
         String imageUrl = getIntent().getStringExtra("item_image");
@@ -38,19 +48,19 @@ public class DetailAct extends AppCompatActivity {
         detailName.setText(name);
         detailDescription.setText(description);
 
-        // Memuat gambar menggunakan Bitmap (menggunakan AsyncTask untuk proses download gambar)
+        // Memuat gambar menggunakan AsyncTask
         new LoadImageTask(detailImage).execute(imageUrl);
 
+        // Listener untuk tombol sunting
         sunting.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(DetailAct.this, Edit.class);
-                // Ambil data dari Intent
+                // Kirim data ke Edit.java
+                intent.putExtra("item_id", id);
                 intent.putExtra("item_name", name);
                 intent.putExtra("item_description", description);
                 intent.putExtra("item_image", imageUrl);
-
-
                 startActivity(intent);
             }
         });
@@ -58,7 +68,7 @@ public class DetailAct extends AppCompatActivity {
 
     // AsyncTask untuk memuat gambar dari URL
     private static class LoadImageTask extends AsyncTask<String, Void, Bitmap> {
-        private ImageView imageView;
+        private final ImageView imageView;
 
         public LoadImageTask(ImageView imageView) {
             this.imageView = imageView;

@@ -133,12 +133,13 @@ public class Home extends AppCompatActivity {
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
+                                String id = jsonObject.getString("id"); // Ambil ID item dari database
                                 String name = jsonObject.getString("item_name");
                                 String description = jsonObject.getString("description");
                                 String imageUrl = "http://192.168.47.150/tokopedia-db/" + jsonObject.getString("image_path");
 
                                 // Tambahkan item ke list
-                                itemList.add(new Item(name, description, imageUrl));
+                                itemList.add(new Item(id, name, description, imageUrl));
                             }
                             adapter.notifyDataSetChanged();
                         } catch (JSONException e) {
@@ -158,14 +159,14 @@ public class Home extends AppCompatActivity {
         home_listview.setOnItemClickListener((parent, view, position, id) -> {
             Item selectedItem = itemList.get(position);
 
-            // Pindah ke halaman DetailActivity
+            // Pindah ke halaman DetailAct
             Intent intent = new Intent(Home.this, DetailAct.class);
+            intent.putExtra("item_id", selectedItem.getId()); // Kirimkan ID item
             intent.putExtra("item_name", selectedItem.getName());
             intent.putExtra("item_description", selectedItem.getDescription());
             intent.putExtra("item_image", selectedItem.getImageUrl());
             startActivity(intent);
         });
-
     }
 
 

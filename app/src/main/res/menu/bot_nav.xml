@@ -3,7 +3,4 @@
     <item android:id="@+id/menu_home"
         android:title="Home"
         android:icon="@drawable/icon_home"/>
-    <item android:id="@+id/menu_edit"
-        android:title="Edit"
-        android:icon="@drawable/icon_edit"/>
 </menu>
